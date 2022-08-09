@@ -1,0 +1,1 @@
+const SLACK_TOKEN = '<YOUR_SLACK_TOKEN>';
