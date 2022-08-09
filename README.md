@@ -27,7 +27,7 @@ Google Apps Script to retrieve Slack messages
     * Go `Extensions` -> `Apps Script`, then open Apps Script project
     * Make three `script` type files: [main.gs](https://github.com/rcmdnk/Slack-gas/blob/main/main.gs), [params.gs](https://github.com/rcmdnk/Slack-gas/blob/main/params.gs), [secret.gs](https://github.com/rcmdnk/Slack-gas/blob/main/secrets.gs)
     * Copy contents of these files in this repository to the above files.
-    * Edit [secret.gs](https://github.com/rcmdnk/Slack-gas/blob/main/secrets.gs) in the Apps Script project to update `<YOUR_SLACK_TOKEN>` as your `User OAuth Token` that you got in the above procedure.
+    * Edit **secret.gs** in the Apps Script project to update `<YOUR_SLACK_TOKEN>` as your `User OAuth Token` that you got in the above procedure.
 
 
 ## Parameter settings
@@ -36,19 +36,42 @@ Set parameters as you like:
 
 Name|Comment
 :-|:-
-TIME_ZONE|Set your time zone.
-FULL_CHECK|false;
-MAX_MESSAGES|500;
-FILL_EACH|false;
-CHANNEL_TYPES|'public_channel,private_channel,mpim,im';
-CHANNEL_INCLUDE| [];
-CHANNEL_EXCLUDE|[];
-CHANNEL_EXCLUDE_ARCHIVED| false;
-REMOVE_SAME_NAME_FILES| false;
-DATETIME_COLUMN_WIDTH| 150;
-USER_COLUMN_WIDTH| 100;
-MESSAGE_COLUMN_WIDTH| 1000;
-UNIXTIME_COLUMN_WIDTH| 150;
-EDITED_TS_COLUMN_WIDTH| 150;
-THREAD_TS_COLUMN_WIDTH| 150;
-PIGINATE_LIMIT| 200;
+TIME_ZONE|Set your time zone. Set `null` to use the script's time zone.
+FULL_CHECK|If true, no limit is set at API to get messages. If false, set the oldest as the latest message's time stamp in the channel sheet.
+MAX_MESSAGES|Max number of messages to retrieve in the one job. 100 or 200 are safe, but 500 may exceed the time limit of the Apps Script (6 min). But in most cases, you can just re-run the script and the job will retrieve the remaining messages.
+FILL_EACH|If true, fill each message in the sheet one by one. Otherwise, all messages in the channel are filled at the same time. This option may be useful if you have many messages in the channel and want to set MAX_MESSAGES higher.
+CHANNEL_TYPES|Set channel types that you want to retrieve. Types are: `public_channel`, `private_channel`, `mpim`, and `im`. Multiple types can be set as a comma-separated string like `'public_channel,private_channel,mpim,im'`.
+CHANNEL_INCLUDE|Channels to be included. If it is empty, no filter is applied by this value.
+CHANNEL_EXCLUDE|Channels to be excluded.
+CHANNEL_EXCLUDE_ARCHIVED|If true, archive channels are excluded.
+REMOVE_SAME_NAME_FILES|If true, older attached files with the same name are removed. This breaks links in the older messages.
+DATETIME_COLUMN_WIDTH|Column width of Datetime.
+USER_COLUMN_WIDTH| Column width of User.
+MESSAGE_COLUMN_WIDTH| Column width of Message.
+UNIXTIME_COLUMN_WIDTH| Column width of Thread time stamp.
+EDITED_TS_COLUMN_WIDTH| Column width of UnixTime.
+THREAD_TS_COLUMN_WIDTH| Column width of Edited time stamp.
+PIGINATE_LIMIT| A limit number to retrieve objects by the slack API at one time.
+
+## Retrieve messages by hand
+
+* Open **main.gs** in the Apps Script project
+* Save files by pushing the save (disc icon) button.
+* Select `run` function.
+* Run the job by `Run`
+
+If you see a time-out error, you can retry until all messages are retrieved.
+
+## Schedule job
+
+It is good to schedule the job to retrieve messages every day.
+
+* Go `Trigger` (Clock icon) in the Apps Script project.
+* `Add Trigger`
+    * Choose which function to run: `run`
+    * Which runs at deployment: `Head`
+    * Select event source: `Time-driven`
+    * Select type of time based trigger: `Day timer`
+    * Select time of day: `0 am to 1 am`
+
+This trigger runs the job between 0 am to 1 am every day.
