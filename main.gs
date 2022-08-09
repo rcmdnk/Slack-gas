@@ -1,3 +1,9 @@
+funciton getTimeZone(){
+  if(TIME_ZONE === null) return Session.getScriptTimeZone();
+  return TIME_ZONE;
+}
+
+
 function request(method, payload={}, urlPrefix='https://slack.com/api/', jsonParse=true) {
   const url = urlPrefix + method;
   const options = {
@@ -115,7 +121,7 @@ function getReplies(channelId, ts){
 
 function getSheet(sheetName, cols=[], timeFormat='yyyy/MM/dd HH:mm:ss', makeSheet=true) {
   const ss = SpreadsheetApp.getActive();
-  ss.setSpreadsheetTimeZone(TIME_ZONE);
+  ss.setSpreadsheetTimeZone(getTimeZone());
   let sheet = ss.getSheetByName(sheetName);
   if(!sheet) {
     if(!makeSheet){
@@ -144,7 +150,7 @@ function fillValues(sheet, data, sortColumn=1){
 
 
 function getDate(unixtime=null, timezone=null, format='yyyy/MM/dd HH:mm:ss'){
-  if (!timezone) timezone = TIME_ZONE;
+  if (!timezone) timezone = getTimeZone();
   if (!unixtime) {
     return Utilities.formatDate(new Date(), timezone, format);
   }
@@ -293,7 +299,7 @@ function fillMessages(messages, timesEdited, users, downloadFolder, sheet, nMess
 
 function extractMessages(id, name, users, nMessages){
   console.log('Extracting messages from ' + name)
-  const cols = ['Datetime (' + TIME_ZONE + ')', 'User', 'Message', 'ThreadTS', 'UnixTime', 'Edited'];
+  const cols = ['Datetime (' + getTimeZone() + ')', 'User', 'Message', 'ThreadTS', 'UnixTime', 'Edited'];
   const sheet = getSheet(name, cols);
 
   sheet.setColumnWidth(1, DATETIME_COLUMN_WIDTH);

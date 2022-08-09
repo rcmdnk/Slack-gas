@@ -1,4 +1,4 @@
-const TIME_ZONE = 'Asia/Tokyo';
+const TIME_ZONE = null;
 const FULL_CHECK = false;
 const MAX_MESSAGES = 500;
 const FILL_EACH = false;
