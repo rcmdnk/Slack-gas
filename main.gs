@@ -1,4 +1,4 @@
-funciton getTimeZone(){
+function getTimeZone(){
   if(TIME_ZONE === null) return Session.getScriptTimeZone();
   return TIME_ZONE;
 }
@@ -208,7 +208,25 @@ function download(url, fileName, folder){
   return file.getUrl();
 }
 
-function getMessageData(messages, timesEdited, users, downloadFolder, nMessages){
+function saveMessage(message, folder){
+  const ts = message.ts;
+  const fileName = ts + '.json';
+  if(REMOVE_OLD_MESSAGE){
+    const files = folder.getFilesByName(fileName);
+    while (files.hasNext()) {
+      files.next().setTrashed(true);
+    }
+  }
+  const file = folder.createFile(fileName, JSON.stringify(message));
+  file.setName(fileName);
+  return file.getUrl();
+}
+
+function getMessageData(messages, timesEdited, users, channelName, nMessages){
+  const channelFolder = getDriveFolder(channelName);
+  const downloadFolder = getDriveFolder('files', channelFolder);
+  const messageFolder = getDriveFolder('messages', channelFolder);
+
   const data = new Array();
   const threadTsArray = new Array();
   messages.forEach(function(message){
@@ -226,13 +244,16 @@ function getMessageData(messages, timesEdited, users, downloadFolder, nMessages)
         threadTsArray.push(threadTs);
       }
       if(timesEdited.find(e => message.ts == e[0] && (editedTs == null || editedTs == e[1])))return;
+
       const datetime = getDate(message.ts);
+
       let user = '';
       if('username' in message){
         user = message['username'];
       }else{
         user = getUser(message.user, users);
       }
+
       let text = '';
       if('attachments' in message){
         message['attachments'].forEach(function(attachment){
@@ -247,29 +268,40 @@ function getMessageData(messages, timesEdited, users, downloadFolder, nMessages)
         text += message.text;
       }
       text = parseMessage(text, users);
-      let richText = SpreadsheetApp.newRichTextValue().setText(text);
+      let messageText = SpreadsheetApp.newRichTextValue().setText(text);
       let files = new Array();
       if('files' in message){
         if(text != "")text += "\n";
         text += "Files: ";
         message.files.forEach(function(file){
-          const fileUrl = download(file.url_private_download, file.name, downloadFolder);
-          if(!text.endsWith("Files: "))text += ', ';
+          let fileUrl = '';
+          if(SAVE_FILE) fileUrl = download(file.url_private_download, file.name, downloadFolder);
+          if(!text.endsWith("Files: ")) text += ', ';
           files.push([file.name, fileUrl, text.length, text.length + file.name.length]);
           text += file.name
         })
-        richText = SpreadsheetApp.newRichTextValue().setText(text);
-        files.forEach(function(f){
-          richText = richText.setLinkUrl(f[2], f[3], f[1])
-        });
+        messageText = SpreadsheetApp.newRichTextValue().setText(text);
+        if(SAVE_FILE){
+          files.forEach(function(f){
+            messageText = messageText.setLinkUrl(f[2], f[3], f[1]);
+          });
+        }
       }
-      richText = richText.build();
+      messageText = messageText.build();
+
+      let messageTs = SpreadsheetApp.newRichTextValue().setText(message.ts);
+      if(SAVE_MESSAGE_JSON){
+        const messageUrl = saveMessage(message, messageFolder);
+        messageTs = messageTs.setLinkUrl(0, message.ts.length, messageUrl);
+      }
+      messageTs = messageTs.build()
+
       data.push([
         SpreadsheetApp.newRichTextValue().setText(datetime).build(),
         SpreadsheetApp.newRichTextValue().setText(user).build(),
-        richText,
+        messageText,
         SpreadsheetApp.newRichTextValue().setText(threadTs).build(),
-        SpreadsheetApp.newRichTextValue().setText(message.ts).build(),
+        messageTs,
         SpreadsheetApp.newRichTextValue().setText(editedTs).build()]);
     }
     nMessages += 1;
@@ -277,18 +309,18 @@ function getMessageData(messages, timesEdited, users, downloadFolder, nMessages)
   return [data, threadTsArray, nMessages];
 }
 
-function fillMessages(messages, timesEdited, users, downloadFolder, sheet, nMessages, threadTs){
+function fillMessages(messages, timesEdited, users, channelName, sheet, nMessages, threadTs){
   if(FILL_EACH){
     messages.forEach(function(message){
       if(nMessages >= MAX_MESSAGES) return;
-      let ret = getMessageData([message], timesEdited, users, downloadFolder, nMessages);
+      let ret = getMessageData([message], timesEdited, users, channelName, nMessages);
       let data = ret[0];
       if(ret[1].length == 1) threadTs.push(ret[1][0]);
       nMessages = ret[2];
       fillValues(sheet, data, 5);
     });
   }else{
-    let ret = getMessageData(messages, timesEdited, users, downloadFolder, nMessages);
+    let ret = getMessageData(messages, timesEdited, users, channelName, nMessages);
     let data = ret[0];
     threadTs = ret[1];
     nMessages = ret[2];
@@ -297,8 +329,7 @@ function fillMessages(messages, timesEdited, users, downloadFolder, sheet, nMess
   return [nMessages, threadTs];
 }
 
-function extractMessages(id, name, users, nMessages){
-  console.log('Extracting messages from ' + name)
+function retrieveMessages(id, name, users, nMessages){
   const cols = ['Datetime (' + getTimeZone() + ')', 'User', 'Message', 'ThreadTS', 'UnixTime', 'Edited'];
   const sheet = getSheet(name, cols);
 
@@ -308,9 +339,6 @@ function extractMessages(id, name, users, nMessages){
   sheet.setColumnWidth(4, THREAD_TS_COLUMN_WIDTH);
   sheet.setColumnWidth(5, UNIXTIME_COLUMN_WIDTH);
   sheet.setColumnWidth(6, EDITED_TS_COLUMN_WIDTH);
-
-  const channelFolder = getDriveFolder(name);
-  const downloadFolder = getDriveFolder('files', channelFolder);
 
   let oldest = '0';
   if(!FULL_CHECK){
@@ -323,14 +351,14 @@ function extractMessages(id, name, users, nMessages){
 
   let messages = getMessages(id, oldest);
   let threadTs = [];
-  let ret = fillMessages(messages, timesEdited, users, downloadFolder, sheet, nMessages, threadTs);
+  let ret = fillMessages(messages, timesEdited, users, name, sheet, nMessages, threadTs);
   nMessages = ret[0];
   threadTs = ret[1];
   if(nMessages >= MAX_MESSAGES) return nMessages;
   threadTs.forEach(function(ts){
     if(nMessages >= MAX_MESSAGES) return;
     replies = getReplies(id, ts);
-    let ret = fillMessages(replies, timesEdited, users, downloadFolder, sheet, nMessages, threadTs);
+    let ret = fillMessages(replies, timesEdited, users, name, sheet, nMessages, threadTs);
     nMessages = ret[0];
   });
   return nMessages;
@@ -343,7 +371,10 @@ function run(){
   channels.forEach(function(name, id){
     if(CHANNEL_INCLUDE.length > 0 && ! (CHANNEL_INCLUDE.includes(name))) return;
     if(CHANNEL_EXCLUDE.includes(name)) return;
-    nMessages = extractMessages(id, name, users, nMessages);
+    console.log('Retrieving messages from ' + name);
+    nMessagesPre = nMessages;
+    nMessages = retrieveMessages(id, name, users, nMessages);
+    console.log(nMessages - nMessagesPre + ' messages were retrieved from channel: ' + name);
     if(nMessages >= MAX_MESSAGES)return;
   });
 }
