@@ -1,3 +1,7 @@
+var users = new Map();
+var bots = new Map();
+var nMessages = 0;
+
 function getTimeZone(){
   if(TIME_ZONE === null) return Session.getScriptTimeZone();
   return TIME_ZONE;
@@ -49,16 +53,14 @@ function getUsers(){
   const method = 'users.list';
   let payload = {};
   const results = paginate(method, payload);
-  const users = new Map();
   results.forEach(function(result){
     result.members.forEach(function(f){
       users.set(f['id'], f['name']);
     });
   });
-  return users;
 }
 
-function getChannels(users){
+function getChannels(){
   const method = 'conversations.list';
   let payload = {
       exclude_archived: CHANNEL_EXCLUDE_ARCHIVED,
@@ -133,11 +135,11 @@ function getSheet(sheetName, cols=[], timeFormat='yyyy/MM/dd HH:mm:ss', makeShee
     sheet.deleteRows(1, sheet.getMaxRows() - 2);
     const nCols = cols.length != 0 ? cols.length: 1;
     sheet.deleteColumns( 1, sheet.getMaxColumns() - nCols);
-    cols.forEach(function(c, i) {
-      sheet.getRange(1, i+1).setValue(c);
-    });
+    sheet.getRange(1, 1, 1, cols.length).setValues([cols]);
     sheet.getRange('A:A').setNumberFormat(timeFormat);
     sheet.setFrozenRows(1);
+  }else if(UPDATE_COLUMN_NAME){
+    sheet.getRange(1, 1, 1, cols.length).setValues([cols]);
   }
   return sheet;
 }
@@ -157,7 +159,7 @@ function getDate(unixtime=null, timezone=null, format='yyyy/MM/dd HH:mm:ss'){
   return Utilities.formatDate(new Date(unixtime * 1000), timezone, format);
 }
 
-function getUser(user, users){
+function getUser(user){
   if(users.has(user)){
     user = '@' + users.get(user);
   }
@@ -165,7 +167,22 @@ function getUser(user, users){
   return user;
 }
 
-function parseMessage(message, users){
+function getBot(botId){
+  if(bots.has('botId')) return bots[botId];
+
+  const method = 'bots.info';
+  let payload = {
+    bot: botId
+  };
+  const results = request(method, payload);
+  if('bot' in results && 'name' in results.bot){
+    bots.set(botId, results.bot['name']);
+    return results.bot['name'];
+  }
+  return botId;
+}
+
+function parseMessage(message){
   if(message == null)message = "";
   message = message
   .replace(/&lt;/g, "<")
@@ -222,7 +239,7 @@ function saveMessage(message, folder){
   return file.getUrl();
 }
 
-function getMessageData(messages, timesEdited, users, channelName, nMessages){
+function getMessageData(messages, timesEdited, channelName){
   const channelFolder = getDriveFolder(channelName);
   const downloadFolder = getDriveFolder('files', channelFolder);
   const messageFolder = getDriveFolder('messages', channelFolder);
@@ -250,8 +267,10 @@ function getMessageData(messages, timesEdited, users, channelName, nMessages){
       let user = '';
       if('username' in message){
         user = message['username'];
-      }else{
-        user = getUser(message.user, users);
+      }else if('user' in message){
+        user = getUser(message.user);
+      }else if('bot_id' in message){
+        user = getBot(message.bot_id);
       }
 
       let text = '';
@@ -267,7 +286,7 @@ function getMessageData(messages, timesEdited, users, channelName, nMessages){
         if(text != '') text == '\n';
         text += message.text;
       }
-      text = parseMessage(text, users);
+      text = parseMessage(text);
       let messageText = SpreadsheetApp.newRichTextValue().setText(text);
       let files = new Array();
       if('files' in message){
@@ -306,31 +325,30 @@ function getMessageData(messages, timesEdited, users, channelName, nMessages){
     }
     nMessages += 1;
   });
-  return [data, threadTsArray, nMessages];
+  return [data, threadTsArray];
 }
 
-function fillMessages(messages, timesEdited, users, channelName, sheet, nMessages, threadTs){
+function fillMessages(messages, timesEdited, channelName, sheet){
+  let threadTs = new Array();
   if(FILL_EACH){
     messages.forEach(function(message){
       if(nMessages >= MAX_MESSAGES) return;
-      let ret = getMessageData([message], timesEdited, users, channelName, nMessages);
+      let ret = getMessageData([message], timesEdited, channelName);
       let data = ret[0];
       if(ret[1].length == 1) threadTs.push(ret[1][0]);
-      nMessages = ret[2];
       fillValues(sheet, data, 5);
     });
   }else{
-    let ret = getMessageData(messages, timesEdited, users, channelName, nMessages);
+    let ret = getMessageData(messages, timesEdited, channelName);
     let data = ret[0];
     threadTs = ret[1];
-    nMessages = ret[2];
     fillValues(sheet, data, 5);
   }
-  return [nMessages, threadTs];
+  return threadTs;
 }
 
-function retrieveMessages(id, name, users, nMessages){
-  const cols = ['Datetime (' + getTimeZone() + ')', 'User', 'Message', 'ThreadTS', 'UnixTime', 'Edited'];
+function retrieveMessages(id, name){
+  const cols = ['Datetime (' + getTimeZone() + ')', 'User/Bot', 'Message', 'ThreadTS', 'UnixTime', 'Edited'];
   const sheet = getSheet(name, cols);
 
   sheet.setColumnWidth(1, DATETIME_COLUMN_WIDTH);
@@ -350,30 +368,25 @@ function retrieveMessages(id, name, users, nMessages){
   const timesEdited = sheet.getRange('E:F').getValues();
 
   let messages = getMessages(id, oldest);
-  let threadTs = [];
-  let ret = fillMessages(messages, timesEdited, users, name, sheet, nMessages, threadTs);
-  nMessages = ret[0];
-  threadTs = ret[1];
+  const threadTs = fillMessages(messages, timesEdited, name, sheet);
   if(nMessages >= MAX_MESSAGES) return nMessages;
   threadTs.forEach(function(ts){
     if(nMessages >= MAX_MESSAGES) return;
     replies = getReplies(id, ts);
-    let ret = fillMessages(replies, timesEdited, users, name, sheet, nMessages, threadTs);
-    nMessages = ret[0];
+    fillMessages(replies, timesEdited, name, sheet);
   });
-  return nMessages;
 }
 
 function run(){
-  const users = getUsers();
-  const channels = getChannels(users);
-  let nMessages = 0;
+  getUsers();
+  const channels = getChannels();
+  nMessages = 0;
   channels.forEach(function(name, id){
     if(CHANNEL_INCLUDE.length > 0 && ! (CHANNEL_INCLUDE.includes(name))) return;
     if(CHANNEL_EXCLUDE.includes(name)) return;
     console.log('Retrieving messages from ' + name);
     nMessagesPre = nMessages;
-    nMessages = retrieveMessages(id, name, users, nMessages);
+    retrieveMessages(id, name, nMessages);
     console.log(nMessages - nMessagesPre + ' messages were retrieved from channel: ' + name);
     if(nMessages >= MAX_MESSAGES)return;
   });

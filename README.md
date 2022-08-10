@@ -39,7 +39,7 @@ Name|Comment
 TIME_ZONE|Set your time zone. Set `null` to use the script's time zone.
 FULL_CHECK|If true, no limit is set at API to get messages. If false, set the oldest as the latest message's time stamp in the channel sheet. If false, messages in the thread could be ignored even if they are newer but the parent messages are older.
 MAX_MESSAGES|Max number of messages to retrieve in the one job. 100 or 200 are safe, but 500 may exceed the time limit of the Apps Script (6 min). But in most cases, you can just re-run the script and the job will retrieve the remaining messages.
-FILL_EACH|If true, fill each message in the sheet one by one. Otherwise, all messages in the channel are filled at the same time. This option may be useful if you have many messages in the channel and want to set MAX_MESSAGES higher.
+FILL_EACH|If true, fill each message in the sheet one by one. Otherwise, all messages in the channel are filled at the same time. This option may be useful if you have many messages in the channel and want to set MAX_MESSAGES higher, but it makes the job slow.
 CHANNEL_TYPES|Set channel types that you want to retrieve. Types are: `public_channel`, `private_channel`, `mpim`, and `im`. Multiple types can be set as a comma-separated string like `'public_channel,private_channel,mpim,im'`.
 CHANNEL_INCLUDE|Channels to be included. If it is empty, no filter is applied by this value.
 CHANNEL_EXCLUDE|Channels to be excluded.
@@ -48,6 +48,7 @@ SAVE_FILE|If true, files attached to messages are saved in the the Google Drive.
 REMOVE_SAME_NAME_FILES|If true, older attached files with the same name are removed. This breaks links in the older messages.
 SAVE_MESSAGE_JASON|If true, messages are saved as a json format in the Google Drive. Note: This makes the job very slow and only ~100 messages can be retrieved.
 REMOVE_OLD_MESSAGE|If true, saved message files are removed when newer same time stamp messages are saved (it happens when the message is edited).
+UPDATE_COLUMN_NAME|If true, column names are updated even if the sheet already exists.
 DATETIME_COLUMN_WIDTH|Column width of Datetime.
 USER_COLUMN_WIDTH| Column width of User.
 MESSAGE_COLUMN_WIDTH| Column width of Message.
