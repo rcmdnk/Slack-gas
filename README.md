@@ -110,6 +110,12 @@ If `FULL_CHECK = false`, only newer messages than the latest message in the chan
 It means if the thread starts before the latest message,
 messages in the thread can not be retrieved even if they are newer than the latest message.
 
+It happens when the thread start message is older than Now - `COVERAGE`, too.
+
+It may be good to set `FULL_CHECK = true` and `COVERAGE = 2592000` (1 month) for the daily job.
+
+
+
 
 
 
