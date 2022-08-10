@@ -1,7 +1,7 @@
 const TIME_ZONE = null;
 const FULL_CHECK = true;
 const MAX_MESSAGES = 500;
-const FILL_EACH = false;
+const FILL_EACH = true;
 
 const CHANNEL_TYPES = 'public_channel,private_channel,mpim,im';
 const CHANNEL_INCLUDE = [];
@@ -11,7 +11,7 @@ const CHANNEL_EXCLUDE_ARCHIVED = false;
 const SAVE_FILE = true;
 const REMOVE_SAME_NAME_FILES = false;
 
-const SAVE_MESSAGE_JSON = true;
+const SAVE_MESSAGE_JSON = false;
 const REMOVE_OLD_MESSAGE = false;
 
 const DATETIME_COLUMN_WIDTH = 150;

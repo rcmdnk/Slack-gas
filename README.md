@@ -46,7 +46,7 @@ CHANNEL_EXCLUDE|Channels to be excluded.
 CHANNEL_EXCLUDE_ARCHIVED|If true, archive channels are excluded.
 SAVE_FILE|If true, files attached to messages are saved in the the Google Drive.
 REMOVE_SAME_NAME_FILES|If true, older attached files with the same name are removed. This breaks links in the older messages.
-SAVE_MESSAGE_JASON|If true, messages are saved as a json format in the Google Drive.
+SAVE_MESSAGE_JASON|If true, messages are saved as a json format in the Google Drive. Note: This makes the job very slow and only ~100 messages can be retrieved.
 REMOVE_OLD_MESSAGE|If true, saved message files are removed when newer same time stamp messages are saved (it happens when the message is edited).
 DATETIME_COLUMN_WIDTH|Column width of Datetime.
 USER_COLUMN_WIDTH| Column width of User.
