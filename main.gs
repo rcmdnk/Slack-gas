@@ -2,8 +2,23 @@ var users = new Map();
 var bots = new Map();
 var nMessages = 0;
 
+function run(){
+  getUsers();
+  const channels = getChannels();
+  nMessages = 0;
+  channels.forEach(function(name, id){
+    if(CHANNEL_INCLUDE.length > 0 && ! (CHANNEL_INCLUDE.includes(name))) return;
+    if(CHANNEL_EXCLUDE.includes(name)) return;
+    console.log('Retrieving messages from ' + name);
+    nMessagesPre = nMessages;
+    retrieveMessages(id, name, nMessages);
+    console.log(nMessages - nMessagesPre + ' messages were retrieved from channel: ' + name);
+    if(nMessages >= MAX_MESSAGES)return;
+  });
+}
+
 function getTimeZone(){
-  if(TIME_ZONE === null) return Session.getScriptTimeZone();
+  if(TIME_ZONE == null) return Session.getScriptTimeZone();
   return TIME_ZONE;
 }
 
@@ -83,7 +98,7 @@ function getChannels(){
   return channels;
 }
 
-function getMessages(channelId, oldest){
+function getMessages(channelId, oldest=0){
   // `limit` does not work for history? (it seems always 100)
   const method = 'conversations.history';
   let payload = {
@@ -365,29 +380,19 @@ function retrieveMessages(id, name){
       oldest = times[times.length - 1];
     }
   }
-  const timesEdited = sheet.getRange('E:F').getValues();
-
+  if(COVERAGE != null && COVERAGE != 0){
+    const coverageStart = Date.now() / 1000. - parseFloat(COVERAGE)
+    if(coverageStart > parseFloat(oldest)){
+      oldest = String(coverageStart);
+    }
+  }
   let messages = getMessages(id, oldest);
+  const timesEdited = sheet.getRange('E:F').getValues();
   const threadTs = fillMessages(messages, timesEdited, name, sheet);
   if(nMessages >= MAX_MESSAGES) return nMessages;
   threadTs.forEach(function(ts){
     if(nMessages >= MAX_MESSAGES) return;
     replies = getReplies(id, ts);
     fillMessages(replies, timesEdited, name, sheet);
-  });
-}
-
-function run(){
-  getUsers();
-  const channels = getChannels();
-  nMessages = 0;
-  channels.forEach(function(name, id){
-    if(CHANNEL_INCLUDE.length > 0 && ! (CHANNEL_INCLUDE.includes(name))) return;
-    if(CHANNEL_EXCLUDE.includes(name)) return;
-    console.log('Retrieving messages from ' + name);
-    nMessagesPre = nMessages;
-    retrieveMessages(id, name, nMessages);
-    console.log(nMessages - nMessagesPre + ' messages were retrieved from channel: ' + name);
-    if(nMessages >= MAX_MESSAGES)return;
   });
 }

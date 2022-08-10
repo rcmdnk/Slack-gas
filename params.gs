@@ -11,6 +11,8 @@ const CHANNEL_EXCLUDE_ARCHIVED = false;
 const SAVE_FILE = true;
 const REMOVE_SAME_NAME_FILES = false;
 
+const COVERAGE = null;
+
 const SAVE_MESSAGE_JSON = false;
 const REMOVE_OLD_MESSAGE = false;
 

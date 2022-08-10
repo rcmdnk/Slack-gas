@@ -46,6 +46,8 @@ CHANNEL_EXCLUDE|Channels to be excluded.
 CHANNEL_EXCLUDE_ARCHIVED|If true, archive channels are excluded.
 SAVE_FILE|If true, files attached to messages are saved in the the Google Drive.
 REMOVE_SAME_NAME_FILES|If true, older attached files with the same name are removed. This breaks links in the older messages.
+COVERAGE|Time in Seconds of the retrieving period. `2592000` (`60*60*24*30`) to retrieve messages in about month. Set 0 or `null` to retrieve all messages.
+Time threshold (in Unixtime) after which messages are retrieved. e.g. `1640995200` for 2022/01/01 00:00:00 (UTC). If it is `null`, no time threshold is set.
 SAVE_MESSAGE_JASON|If true, messages are saved as a json format in the Google Drive. Note: This makes the job very slow and only ~100 messages can be retrieved.
 REMOVE_OLD_MESSAGE|If true, saved message files are removed when newer same time stamp messages are saved (it happens when the message is edited).
 UPDATE_COLUMN_NAME|If true, column names are updated even if the sheet already exists.
@@ -79,3 +81,35 @@ It is good to schedule the job to retrieve messages every day.
     * Select time of day: `0 am to 1 am`
 
 This trigger runs the job between 0 am to 1 am every day.
+
+## More comments on parameters
+
+### SAVE_MESSAGE_JASON
+
+Google Apps Script's job has a time limit of 6 min.
+It is too short to retrieve many messages at once.
+
+If `SAVE_MESSAGE_JASON` is true, about 100 messages are the upper limit to be done in 6 min.
+
+If you don't have so much messages or want to retrieve only the recent and set short `COVERAGE` value,
+it may not a problem.
+
+Otherwise, set `MAX_MESSAGES` as 50~100 and run the job sometime until all messages can be retrieved.
+
+These full message information may not be needed or you can obtain by the export function of the slack.
+
+Therefore, `SAVE_MESSAGE_JSON = false` is recommended for most cases.
+
+If your workspace have a few posts per day, you can set `SAVE_MESSAGE_JSON=false` for the daily job.
+
+
+### FULL_CHECK/COVERAGE
+
+If `FULL_CHECK = false`, only newer messages than the latest message in the channel retrieved in the Sheet.
+
+It means if the thread starts before the latest message,
+messages in the thread can not be retrieved even if they are newer than the latest message.
+
+
+
+
