@@ -112,7 +112,7 @@ Therefore, `SAVE_MESSAGE_JSON = false` is recommended for most cases.
 If your workspace has a few posts per day, you can set `SAVE_MESSAGE_JSON=false` for the daily job.
 
 
-### FULL_CHECK/COVERAGE
+### FULL_CHECK/COVERAGE/CHECK_THREAD_TS_IN_SHEET/THREAD_TS_COVERAGE
 
 If `FULL_CHECK = false`, only newer messages than the latest message in the channel retrieved in the Sheet.
 
