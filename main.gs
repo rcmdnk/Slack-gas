@@ -18,7 +18,7 @@ function run(){
 }
 
 function getTimeZone(){
-  if(TIME_ZONE == null) return Session.getScriptTimeZone();
+  if(TIME_ZONE === null) return Session.getScriptTimeZone();
   return TIME_ZONE;
 }
 
@@ -104,6 +104,7 @@ function getMessages(channelId, oldest=0){
   let payload = {
     channel: channelId,
     oldest: oldest,
+    inclusive: true,
   }
   const results = paginate(method, payload);
   let messages = [];
@@ -178,7 +179,7 @@ function getUser(user){
   if(users.has(user)){
     user = '@' + users.get(user);
   }
-  if(user == null)user = '';
+  if(user === null)user = '';
   return user;
 }
 
@@ -198,7 +199,7 @@ function getBot(botId){
 }
 
 function parseMessage(message){
-  if(message == null)message = "";
+  if(message === null)message = "";
   message = message
   .replace(/&lt;/g, "<")
   .replace(/&gt;/g, ">")
@@ -211,13 +212,13 @@ function parseMessage(message){
 }
 
 function getDriveFolder(name=null, folder=null){
-  if(folder == null){
+  if(folder === null){
     const ss = SpreadsheetApp.getActive();
-    parents = DriveApp.getFileById(ss.getId()).getParents();
+    const parents = DriveApp.getFileById(ss.getId()).getParents();
     folder = parents.next();
   }
-  if(name != null){
-    folders = folder.getFoldersByName(name);
+  if(name !== null){
+    let folders = folder.getFoldersByName(name);
     if(folders.hasNext()){
       folder = folders.next();
     }else{
@@ -275,7 +276,7 @@ function getMessageData(messages, timesEdited, channelName){
         threadTs = message['thread_ts'];
         threadTsArray.push(threadTs);
       }
-      if(timesEdited.find(e => message.ts == e[0] && (editedTs == null || editedTs == e[1])))return;
+      if(timesEdited.find(e => message.ts == e[0] && (editedTs === null || editedTs == e[1])))return;
 
       const datetime = getDate(message.ts);
 
@@ -380,7 +381,7 @@ function retrieveMessages(id, name){
       oldest = times[times.length - 1];
     }
   }
-  if(COVERAGE != null && COVERAGE != 0){
+  if(COVERAGE !== null && COVERAGE != 0){
     const coverageStart = Date.now() / 1000. - parseFloat(COVERAGE)
     if(coverageStart > parseFloat(oldest)){
       oldest = String(coverageStart);
@@ -388,8 +389,29 @@ function retrieveMessages(id, name){
   }
   let messages = getMessages(id, oldest);
   const timesEdited = sheet.getRange('E:F').getValues();
-  const threadTs = fillMessages(messages, timesEdited, name, sheet);
+  let threadTs = fillMessages(messages, timesEdited, name, sheet);
   if(nMessages >= MAX_MESSAGES) return nMessages;
+
+  if(CHECK_THREAD_TS_IN_SHEET){
+    let threadTsInSheet = sheet.getRange('D:D').getValues().filter(function(ts){
+      return ts != '';
+    });;
+    threadTsInSheet.shift()
+    threadTs = [...new Set(threadTs.concat(threadTsInSheet))].map(function(ts){
+      return String(ts);
+    });
+    oldest = null;
+    if(THREAD_TS_COVERAGE !== null && COVERAGE != 0){
+      oldest = Date.now() / 1000. - parseFloat(THREAD_TS_COVERAGE);
+    }else if(COVERAGE !== null && COVERAGE != 0){
+      oldest = Date.now() / 1000. - parseFloat(COVERAGE);
+    }
+    if(oldest !== null){
+      threadTs = threadTs.filter(function(ts){
+        return parseFloat(ts) >= oldest;
+      });
+    }
+  }
   threadTs.forEach(function(ts){
     if(nMessages >= MAX_MESSAGES) return;
     replies = getReplies(id, ts);

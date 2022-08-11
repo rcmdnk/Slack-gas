@@ -44,11 +44,12 @@ CHANNEL_TYPES|Set channel types that you want to retrieve. Types are: `public_ch
 CHANNEL_INCLUDE|Channels to be included. If it is empty, no filter is applied by this value.
 CHANNEL_EXCLUDE|Channels to be excluded.
 CHANNEL_EXCLUDE_ARCHIVED|If true, archive channels are excluded.
-SAVE_FILE|If true, files attached to messages are saved in the the Google Drive.
+SAVE_FILE|If true, files attached to messages are saved in Google Drive.
 REMOVE_SAME_NAME_FILES|If true, older attached files with the same name are removed. This breaks links in the older messages.
-COVERAGE|Time in Seconds of the retrieving period. `2592000` (`60*60*24*30`) to retrieve messages in about month. Set 0 or `null` to retrieve all messages.
-Time threshold (in Unixtime) after which messages are retrieved. e.g. `1640995200` for 2022/01/01 00:00:00 (UTC). If it is `null`, no time threshold is set.
-SAVE_MESSAGE_JASON|If true, messages are saved as a json format in the Google Drive. Note: This makes the job very slow and only ~100 messages can be retrieved.
+COVERAGE|Time in seconds of the retrieving period for messages. `2592000` (`60*60*24*30`) to retrieve messages in about a month. Set 0 or `null` to retrieve all messages.
+CHECK_THREAD_TS_IN_SHEET|If true, check threads that were already filled in the sheets.
+THREAD_TS_COVERAGE|Time in seconds of the retrieving period for messages in the thread.
+SAVE_MESSAGE_JSON|If true, messages are saved as a JSON format in Google Drive. Note: This makes the job very slow and only ~100 messages can be retrieved.
 REMOVE_OLD_MESSAGE|If true, saved message files are removed when newer same time stamp messages are saved (it happens when the message is edited).
 UPDATE_COLUMN_NAME|If true, column names are updated even if the sheet already exists.
 DATETIME_COLUMN_WIDTH|Column width of Datetime.
@@ -84,35 +85,46 @@ This trigger runs the job between 0 am to 1 am every day.
 
 ## More comments on parameters
 
-### SAVE_MESSAGE_JASON
+### TIME_ZONE
+
+If `TIME_ZONE` is `null`, the script sets TIME_ZONE as Apps Script Project's time zone.
+
+It could be different from your real time zone.
+
+Please set it in params.gs, or check and update the time zone of the project's time zone.
+
+### SAVE_MESSAGE_JSON
 
 Google Apps Script's job has a time limit of 6 min.
 It is too short to retrieve many messages at once.
 
-If `SAVE_MESSAGE_JASON` is true, about 100 messages are the upper limit to be done in 6 min.
+If `SAVE_MESSAGE_JSON` is true, about 100 messages are the upper limit to be done in 6 min.
 
-If you don't have so much messages or want to retrieve only the recent and set short `COVERAGE` value,
+If you don't have so many messages or want to retrieve only the recent and set a short `COVERAGE` value,
 it may not a problem.
 
 Otherwise, set `MAX_MESSAGES` as 50~100 and run the job sometime until all messages can be retrieved.
 
-These full message information may not be needed or you can obtain by the export function of the slack.
+This full message information may not be needed or you can obtain it by the export function of Slack.
 
 Therefore, `SAVE_MESSAGE_JSON = false` is recommended for most cases.
 
-If your workspace have a few posts per day, you can set `SAVE_MESSAGE_JSON=false` for the daily job.
+If your workspace has a few posts per day, you can set `SAVE_MESSAGE_JSON=false` for the daily job.
 
 
 ### FULL_CHECK/COVERAGE
 
 If `FULL_CHECK = false`, only newer messages than the latest message in the channel retrieved in the Sheet.
 
-It means if the thread starts before the latest message,
+If `CHECK_THREAD_TS_IN_SHEET = false` and the thread starts before the latest message,
 messages in the thread can not be retrieved even if they are newer than the latest message.
 
-It happens when the thread start message is older than Now - `COVERAGE`, too.
+It happens when the thread starts message is older than Now - `COVERAGE`, too.
 
-It may be good to set `FULL_CHECK = true` and `COVERAGE = 2592000` (1 month) for the daily job.
+If you have a long time thread (especially if 90 days and more),
+it may be good to set `CHECK_THREAD_TS_IN_SHEET = true` and `THREAD_TS_COVERAGE = 31536000` (1 year).
+
+Otherwise, it may be good to set `FULL_CHECK = true`, `COVERAGE = 2592000` (1 month) and  `CHECK_THREAD_TS_IN_SHEET = false` for the daily job.
 
 
 

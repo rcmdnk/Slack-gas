@@ -12,6 +12,8 @@ const SAVE_FILE = true;
 const REMOVE_SAME_NAME_FILES = false;
 
 const COVERAGE = null;
+const CHECK_THREAD_TS_IN_SHEET = false;
+const THREAD_TS_COVERAGE = null;
 
 const SAVE_MESSAGE_JSON = false;
 const REMOVE_OLD_MESSAGE = false;
