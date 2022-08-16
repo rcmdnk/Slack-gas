@@ -309,6 +309,7 @@ function getMessageData(messages, timesEdited, channelName){
         if(text != "")text += "\n";
         text += "Files: ";
         message.files.forEach(function(file){
+          if(!('url_private_download' in file)) return;
           let fileUrl = '';
           if(SAVE_FILE) fileUrl = download(file.url_private_download, file.name, downloadFolder);
           if(!text.endsWith("Files: ")) text += ', ';
