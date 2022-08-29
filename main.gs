@@ -309,7 +309,12 @@ function getMessageData(messages, timesEdited, channelName){
         if(text != "")text += "\n";
         text += "Files: ";
         message.files.forEach(function(file){
-          if(!('url_private_download' in file)) return;
+          if(file.mode == 'tombstone') return;
+          if(!('url_private_download' in file)) {
+            console.warn('In the channel: ' + channelName + ', the following message has non-tombstone file w/o url_private_download');
+            console.warn(message);
+            return;
+          }
           let fileUrl = '';
           if(SAVE_FILE) fileUrl = download(file.url_private_download, file.name, downloadFolder);
           if(!text.endsWith("Files: ")) text += ', ';
